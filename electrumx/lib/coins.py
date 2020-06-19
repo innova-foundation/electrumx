@@ -516,6 +516,17 @@ class NameIndexMixin(NameMixin):
         return super().hashX_from_script(name_index_script)
 
 
+class PrimeChainPowMixin(object):
+    STATIC_BLOCK_HEADERS = False
+    DESERIALIZER = lib_tx.DeserializerPrimecoin
+
+    @classmethod
+    def block_header(cls, block, height):
+        '''Return the block header bytes'''
+        deserializer = cls.DESERIALIZER(block)
+        return deserializer.read_header(cls.BASIC_HEADER_SIZE)
+
+
 class HOdlcoin(Coin):
     NAME = "HOdlcoin"
     SHORTNAME = "HODLC"
@@ -1380,6 +1391,22 @@ class SnowGem(EquihashMixin, Coin):
     RPC_PORT = 16112
     REORG_LIMIT = 800
     CHUNK_SIZE = 200
+
+
+class Zero(EquihashMixin, Coin):
+    NAME = "Zero"
+    SHORTNAME = "ZER"
+    NET = "mainnet"
+    P2PKH_VERBYTE = bytes.fromhex("1CB8")
+    P2SH_VERBYTES = [bytes.fromhex("1CBD")]
+    GENESIS_HASH = ('068cbb5db6bc11be5b93479ea4df41fa'
+                    '7e012e92ca8603c315f9b1a2202205c6')
+    DESERIALIZER = lib_tx.DeserializerZcash
+    TX_COUNT = 329998
+    TX_COUNT_HEIGHT = 847425
+    TX_PER_BLOCK = 2
+    RPC_PORT = 23811
+    REORG_LIMIT = 800
 
 
 class BitcoinZ(EquihashMixin, Coin):
@@ -3101,20 +3128,50 @@ class Ravencoin(Coin):
     GENESIS_HASH = ('0000006b444bc2f2ffe627be9d9e7e7a'
                     '0730000870ef6eb6da46c8eae389df90')
     DESERIALIZER = lib_tx.DeserializerSegWit
-    X16RV2_ACTIVATION_TIME = 1569945600  # algo switch to x16rv2 at this timestamp
+    X16RV2_ACTIVATION_TIME = 1569945600   # algo switch to x16rv2 at this timestamp
+    KAWPOW_ACTIVATION_TIME = 1588788000  # kawpow algo activation time
+    KAWPOW_ACTIVATION_HEIGHT = 1219736
+    KAWPOW_HEADER_SIZE = 120
     TX_COUNT = 5626682
     TX_COUNT_HEIGHT = 887000
     TX_PER_BLOCK = 6
     RPC_PORT = 8766
-    REORG_LIMIT = 55
+    REORG_LIMIT = 100
     PEERS = [
     ]
+
+    @classmethod
+    def static_header_offset(cls, height):
+        '''Given a header height return its offset in the headers file.'''
+        if cls.KAWPOW_ACTIVATION_HEIGHT < 0 or height <= cls.KAWPOW_ACTIVATION_HEIGHT:
+            result = height * cls.BASIC_HEADER_SIZE
+        else:  # RVN block header size increased with kawpow fork
+            baseoffset = cls.KAWPOW_ACTIVATION_HEIGHT * cls.BASIC_HEADER_SIZE
+            result = baseoffset + ((height-cls.KAWPOW_ACTIVATION_HEIGHT) * cls.KAWPOW_HEADER_SIZE)
+        return result
 
     @classmethod
     def header_hash(cls, header):
         '''Given a header return the hash.'''
         timestamp = util.unpack_le_uint32_from(header, 68)[0]
-        if timestamp >= cls.X16RV2_ACTIVATION_TIME:
+        assert cls.KAWPOW_ACTIVATION_TIME > 0
+
+        def reverse_bytes(data):
+            b = bytearray(data)
+            b.reverse()
+            return bytes(b)
+
+        if timestamp >= cls.KAWPOW_ACTIVATION_TIME:
+            import kawpow
+            nNonce64 = util.unpack_le_uint64_from(header, 80)[0]  # uint64_t
+            mix_hash = reverse_bytes(header[88:120])  # uint256
+
+            header_hash = reverse_bytes(double_sha256(header[:80]))
+
+            final_hash = reverse_bytes(kawpow.light_verify(header_hash, mix_hash, nNonce64))
+            return final_hash
+
+        elif timestamp >= cls.X16RV2_ACTIVATION_TIME:
             import x16rv2_hash
             return x16rv2_hash.getPoWHash(header)
         else:
@@ -3132,12 +3189,14 @@ class RavencoinTestnet(Ravencoin):
     GENESIS_HASH = ('000000ecfc5e6324a079542221d00e10'
                     '362bdc894d56500c414060eea8a3ad5a')
     X16RV2_ACTIVATION_TIME = 1567533600
+    KAWPOW_ACTIVATION_HEIGHT = 231544
+    KAWPOW_ACTIVATION_TIME = 1585159200
     TX_COUNT = 496158
     TX_COUNT_HEIGHT = 420500
     TX_PER_BLOCK = 1
     RPC_PORT = 18766
     PEER_DEFAULT_PORTS = {'t': '50003', 's': '50004'}
-    REORG_LIMIT = 55
+    REORG_LIMIT = 100
     PEERS = [
     ]
 
@@ -3469,6 +3528,42 @@ class Navcoin(Coin):
         else:
             import x13_hash
             return x13_hash.getPoWHash(header)
+
+
+class Primecoin(PrimeChainPowMixin, Coin):
+    NAME = "Primecoin"
+    SHORTNAME = "XPM"
+    NET = "mainnet"
+    P2PKH_VERBYTE = bytes.fromhex("17")
+    P2SH_VERBYTES = [bytes.fromhex("53")]
+    WIF_BYTE = bytes.fromhex("97")
+    GENESIS_HASH = ('963d17ba4dc753138078a2f56afb3af9'
+                    '674e2546822badff26837db9a0152106')
+    DAEMON = daemon.FakeEstimateFeeDaemon
+    ESTIMATE_FEE = 1.024
+    TX_COUNT = 7138730
+    TX_COUNT_HEIGHT = 3639500
+    TX_PER_BLOCK = 2
+    RPC_PORT = 9912
+    REORG_LIMIT = 5000
+    PEERS = [
+        'electrumx.primecoin.org s t',
+    ]
+
+
+class PrimecoinTestnet(Primecoin):
+    NAME = "PrimecoinTestnet"
+    SHORTNAME = "tXPM"
+    NET = "testnet"
+    P2PKH_VERBYTE = bytes.fromhex("6f")
+    P2SH_VERBYTES = [bytes.fromhex("c4")]
+    WIF_BYTE = bytes.fromhex("ef")
+    GENESIS_HASH = ('221156cf301bc3585e72de34fe1efdb6'
+                    'fbd703bc27cfc468faa1cdd889d0efa0')
+    RPC_PORT = 9914
+    PEERS = [
+        'electrumx.testnet.primecoin.org t',
+    ]
 
 
 class Unobtanium(AuxPowMixin, Coin):
