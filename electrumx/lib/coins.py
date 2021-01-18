@@ -1941,6 +1941,45 @@ class CanadaeCoin(AuxPowMixin, Coin):
     REORG_LIMIT = 1000
 
 
+class Innova(Coin):
+    NAME = "Innova"
+    SHORTNAME = "INN"
+    NET = "mainnet"
+    XPUB_VERBYTES = bytes.fromhex("0488b21e")
+    XPRV_VERBYTES = bytes.fromhex("0488ade4")
+    P2PKH_VERBYTE = bytes.fromhex("66")  # Address starts with a i
+    P2SH_VERBYTES = [bytes.fromhex("5A")]
+    WIF_BYTE = bytes.fromhex("89")  # WIF starts with a x
+    GENESIS_HASH = ('000009bd42d259eb7031ae4f634aede1'
+                    'a690da795e5529786a72c3cd6d989995')
+    DESERIALIZER = lib_tx.DeserializerTxTime
+    TX_COUNT = 4230
+    RPC_PORT = 14531
+    ESTIMATE_FEE = 0.00001
+    RELAY_FEE = 0.00001
+    DAEMON = daemon.FakeEstimateFeeDaemon
+    TX_COUNT_HEIGHT = 306187
+    TX_PER_BLOCK = 4000
+
+    @classmethod
+    def header_hash(cls, header):
+        '''Given a header return the hash.'''
+        import tribushashm
+        return tribushashm.getPoWHash(header)
+
+
+class InnovaTestnet(Innova):
+    NET = "testnet"
+    XPUB_VERBYTES = bytes.fromhex("043587cf")
+    XPRV_VERBYTES = bytes.fromhex("04358394")
+    P2PKH_VERBYTE = bytes.fromhex("12")
+    P2SH_VERBYTES = [bytes.fromhex("74")]
+    WIF_BYTE = bytes.fromhex("ef")
+    GENESIS_HASH = ('00006d9ebd08daaba835059276f29656'
+                    'a9e018cbd69f79688777c42766ceec6a')
+    RPC_PORT = 15530
+    REORG_LIMIT = 2000
+
 class Denarius(Coin):
     NAME = "Denarius"
     SHORTNAME = "D"
@@ -1958,16 +1997,7 @@ class Denarius(Coin):
     ESTIMATE_FEE = 0.00001
     RELAY_FEE = 0.00001
     DAEMON = daemon.FakeEstimateFeeDaemon
-    TX_COUNT_HEIGHT = 306187
-    TX_PER_BLOCK = 4000
-
-    @classmethod
-    def header_hash(cls, header):
-        '''Given a header return the hash.'''
-        import tribushashm
         return tribushashm.getPoWHash(header)
-
-
 class DenariusTestnet(Denarius):
     NET = "testnet"
     XPUB_VERBYTES = bytes.fromhex("043587cf")
@@ -1979,7 +2009,6 @@ class DenariusTestnet(Denarius):
                     '4b8ca2aa98bdd066278d590462a4fdb4')
     RPC_PORT = 32338
     REORG_LIMIT = 2000
-
 
 class Sibcoin(Dash):
     NAME = "Sibcoin"
