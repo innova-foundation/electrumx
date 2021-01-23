@@ -1972,12 +1972,12 @@ class InnovaTestnet(Innova):
     NET = "testnet"
     XPUB_VERBYTES = bytes.fromhex("043587cf")
     XPRV_VERBYTES = bytes.fromhex("04358394")
-    P2PKH_VERBYTE = bytes.fromhex("12")
+    P2PKH_VERBYTE = bytes.fromhex("41")
     P2SH_VERBYTES = [bytes.fromhex("74")]
-    WIF_BYTE = bytes.fromhex("ef")
+    WIF_BYTE = bytes.fromhex("4B")
     GENESIS_HASH = ('00006d9ebd08daaba835059276f29656'
                     'a9e018cbd69f79688777c42766ceec6a')
-    RPC_PORT = 15530
+    RPC_PORT = 15531
     REORG_LIMIT = 2000
 
 class Denarius(Coin):
@@ -1997,7 +1997,16 @@ class Denarius(Coin):
     ESTIMATE_FEE = 0.00001
     RELAY_FEE = 0.00001
     DAEMON = daemon.FakeEstimateFeeDaemon
+    TX_COUNT_HEIGHT = 306187
+    TX_PER_BLOCK = 4000
+
+    @classmethod
+    def header_hash(cls, header):
+        '''Given a header return the hash.'''
+        import tribushashm
         return tribushashm.getPoWHash(header)
+
+
 class DenariusTestnet(Denarius):
     NET = "testnet"
     XPUB_VERBYTES = bytes.fromhex("043587cf")
@@ -2009,6 +2018,7 @@ class DenariusTestnet(Denarius):
                     '4b8ca2aa98bdd066278d590462a4fdb4')
     RPC_PORT = 32338
     REORG_LIMIT = 2000
+
 
 class Sibcoin(Dash):
     NAME = "Sibcoin"
